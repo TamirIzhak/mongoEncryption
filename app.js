@@ -6,14 +6,20 @@ const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
 const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const app = express();
 
-mongoose.connect("mongodb://localhost:27017/userDB", {useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect("mongodb://localhost:27017/userDB", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+});
 
 app.use(express.static("public"));
 app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
 
 const userSchema = new mongoose.Schema({
     email: String,
@@ -22,59 +28,65 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-app.get("/", function(req,res){
+app.get("/", function(req, res) {
 
     res.render("home");
 });
 
-app.get("/login", function(req,res){
+app.get("/login", function(req, res) {
 
     res.render("login");
 });
 
-app.get("/register", function(req,res){
+app.get("/register", function(req, res) {
 
     res.render("register");
 });
 
-app.post("/register", function(req,res){
+app.post("/register", function(req, res) {
 
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+        if (!err){
+            const newUser = new User({
+                email: req.body.username,
+                password: hash
+            });
+
+            newUser.save(function(err){
+                if (err){
+                    console.log(err);
+                } else {
+                    res.render("secrets");
+                }
+            });
+        } else {
+            res.send(err);
+        }
     });
-    newUser.save();
-    res.render("secrets");
 });
 
-    app.post("/login", function(req,res){
-        const userName = req.body.username;
-        const pass = md5(req.body.password);
+app.post("/login", function(req, res) {
+    const userName = req.body.username;
+    const pass = req.body.password;
 
-        User.findOne({email: userName}, function(err, foundUser){
-
-            if (err){
-                res.send(err);
-            } else {
-                if (foundUser){
-                    if (foundUser.password == pass){
+    User.findOne({email: userName}, function(err, foundUser) {
+        if (err) {
+            res.send(err);
+        } else {
+            if (foundUser) {
+                bcrypt.compare(pass, foundUser.password, function(err, result){
+                    if (result== true) {
                         res.render("secrets");
                     } else {
-                        res.send ("user does not exist");
+                        res.send("user does not exist");
                     }
-                }
+                });
             }
+        }
 
-        });
     });
+});
 
-
-
-
-
-
-
-
-app.listen(3000, function(){
+app.listen(3000, function() {
     console.log("Server is running on port 3000");
 });
