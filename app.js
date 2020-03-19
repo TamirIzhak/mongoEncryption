@@ -40,7 +40,8 @@ mongoose.connect("mongodb://localhost:27017/userDB", {
 //Create mongoose Schema
 const userSchema = new mongoose.Schema({
     email: String,
-    password: String
+    password: String,
+    googleId: String
 });
 // add passportLocalMongoose plugin to userSchema (hashing and salting into mongodb)
 userSchema.plugin(passportLocalMongoose);
@@ -48,11 +49,19 @@ userSchema.plugin(findOrCreate);
 
 const User = new mongoose.model("User", userSchema);
 
-// using passportLocalMongoose to configure passportLocal.
-// Configure authentication strategy and serialize/deserialize the users
+// Configure Authentication strategy
 passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+
+//local serialize and deserialize authentication methods
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
+});
 
 //Google OAuth20 implementation
 passport.use(new GoogleStrategy({
