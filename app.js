@@ -61,6 +61,7 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:3000/auth/google/secrets"
   },
   function(accessToken, refreshToken, profile, cb) {
+      console.log(profile);
     User.findOrCreate({ googleId: profile.id }, function (err, user) {
       return cb(err, user);
     });
@@ -70,6 +71,19 @@ passport.use(new GoogleStrategy({
 app.get("/", function(req, res) {
     res.render("home");
 });
+
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ["profile"] })
+);
+
+app.get("/auth/google/secrets",
+  passport.authenticate("google", { failureRedirect: "/login"}),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect("/secrets");
+  });
+
+
 
 app.get("/login", function(req, res) {
 
